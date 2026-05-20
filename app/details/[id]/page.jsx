@@ -11,7 +11,10 @@ export default function DetailsScreen() {
 
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isFav, setIsFav] = useState(false);
+  const [favorites, setFavorites] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    return JSON.parse(localStorage.getItem('game_vault_favorites') || '[]');
+  });
 
   useEffect(() => {
     const fetchGameDetails = async () => {
@@ -31,20 +34,39 @@ export default function DetailsScreen() {
     }
   }, [id]);
 
+  useEffect(() => {
+    const handleStorage = () => {
+      setFavorites(
+        JSON.parse(localStorage.getItem('game_vault_favorites') || '[]')
+      );
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  const isFav = game ? favorites.some((f) => f.id === game.id) : false;
+
   const toggleFavorite = (game) => {
-    const savedFavs = JSON.parse(localStorage.getItem('favorites') || '[]');
+    const savedFavs = [...favorites];
+
     const isAlreadyFav = savedFavs.find((f) => f.id === game.id);
-    
+
     let newFavs;
+
     if (isAlreadyFav) {
       newFavs = savedFavs.filter((f) => f.id !== game.id);
     } else {
       newFavs = [...savedFavs, game];
     }
-    
-    localStorage.setItem('favorites', JSON.stringify(newFavs));
+
+    setFavorites(newFavs);
+    localStorage.setItem(
+      'game_vault_favorites',
+      JSON.stringify(newFavs)
+    );
+
     window.dispatchEvent(new Event('storage'));
-    setIsFav(!isFav);
   };
 
   if (loading) {
